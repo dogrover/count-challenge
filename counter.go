@@ -13,7 +13,7 @@ func main() {
 }
 
 func run() int {
-	// CHeck that we've been given at least one file to process
+	// Check that we've been given exactly one file to process
 	numArgs := len(os.Args[1:])
 	if numArgs < 1 {
 		fmt.Fprintln(os.Stderr, "No filenames given")
@@ -23,19 +23,24 @@ func run() int {
 		return 1
 	}
 
+	// Check for valid file
 	file, err := os.Open(os.Args[1])
 	if err != nil {
 		fmt.Println(err)
+		return 2
 	}
 	defer file.Close()
 
+	// Scan file lines
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		fmt.Println(scanner.Text())
 	}
 
+	// Notify if some error happened during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Println(err)
+		return 2
 	}
 
 	return 0
