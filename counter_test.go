@@ -1,7 +1,19 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
 
-func TestCounter(t *testing.T) {
-	t.Fail()
+	"github.com/stretchr/testify/assert"
+)
+
+func TestReadTokens(t *testing.T) {
+	data := strings.NewReader("Lorem ipsum sit amet")
+	want := []Token{"Lorem", "ipsum", "sit", "amet"}
+
+	words := make([]Token, 0, 5)
+	for w := range readTokens(data) {
+		words = append(words, w)
+	}
+	assert.ElementsMatch(t, want, words, "Elements should match")
 }

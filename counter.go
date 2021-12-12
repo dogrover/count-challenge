@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -31,17 +32,42 @@ func run() int {
 	}
 	defer file.Close()
 
-	// Scan file lines
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
+	// Scan file for words. Word delimiters are defined by unicode.isSpace.
+	// scanner := bufio.NewScanner(file)
+	// scanner.Split(bufio.ScanWords)
+	// for scanner.Scan() {
+	// 	word := strings.TrimFunc(scanner.Text(), func(r rune) bool {
+	// 		return !unicode.IsLetter(r)
+	// 	})
+	// 	if len(word) > 0 {
+	// 		fmt.Println(word)
+	// 	}
+	// }
 
-	// Notify if some error happened during scanning
-	if err := scanner.Err(); err != nil {
-		fmt.Println(err)
-		return 2
+	// // Notify if some error happened during scanning
+	// if err := scanner.Err(); err != nil {
+	// 	fmt.Println(err)
+	// 	return 2
+	// }
+
+	for word := range readTokens(file) {
+		fmt.Println(word)
 	}
 
 	return 0
+}
+
+type Token string
+
+func readTokens(file io.Reader) chan Token {
+	ch := make(chan Token)
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+	go func() {
+		for scanner.Scan() {
+			ch <- Token(scanner.Text())
+		}
+		close(ch)
+	}()
+	return ch
 }
