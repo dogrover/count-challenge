@@ -8,12 +8,22 @@ import (
 )
 
 func TestReadTokens(t *testing.T) {
-	data := strings.NewReader("Lorem ipsum sit amet")
-	want := []Token{"Lorem", "ipsum", "sit", "amet"}
-
-	words := make([]Token, 0, 5)
-	for w := range readTokens(data) {
-		words = append(words, w)
+	expectedTokens := []Token{"Lorem", "ipsum", "sit", "amet"}
+	cases := []struct {
+		name string
+		data string
+		want []Token
+	}{
+		{"simpleTokens", "Lorem ipsum sit amet", expectedTokens},
+		{"withNewline", "Lorem\nipsum\nsit\namet", expectedTokens},
+		{"extraSpace", "    Lorem  \n  ipsum\n\n\nsit amet     ", expectedTokens},
 	}
-	assert.ElementsMatch(t, want, words, "Elements should match")
+	for _, test := range cases {
+		data := strings.NewReader(test.data)
+		words := make([]Token, 0, len(test.want))
+		for w := range readTokens(data) {
+			words = append(words, w)
+		}
+		assert.ElementsMatch(t, test.want, words, "%v: Elements should match", test.name)
+	}
 }
