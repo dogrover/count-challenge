@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"unicode"
 )
 
 func main() {
@@ -32,40 +34,44 @@ func run() int {
 	}
 	defer file.Close()
 
-	// Scan file for words. Word delimiters are defined by unicode.isSpace.
-	// scanner := bufio.NewScanner(file)
-	// scanner.Split(bufio.ScanWords)
-	// for scanner.Scan() {
-	// 	word := strings.TrimFunc(scanner.Text(), func(r rune) bool {
-	// 		return !unicode.IsLetter(r)
-	// 	})
-	// 	if len(word) > 0 {
-	// 		fmt.Println(word)
-	// 	}
-	// }
-
-	// // Notify if some error happened during scanning
-	// if err := scanner.Err(); err != nil {
-	// 	fmt.Println(err)
-	// 	return 2
-	// }
-
-	for word := range readTokens(file) {
-		fmt.Println(word)
+	words := readWords(file)
+	tokens := wordsToTokens(words)
+	for tok := range tokens {
+		fmt.Println(tok)
 	}
 
 	return 0
 }
 
+type Word string
 type Token string
 
-func readTokens(file io.Reader) chan Token {
-	ch := make(chan Token)
+// Scans a reader for words, delimited by whitespace (as defined by unicode.isSpace)
+func readWords(file io.Reader) <-chan Word {
+	ch := make(chan Word)
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanWords)
 	go func() {
 		for scanner.Scan() {
-			ch <- Token(scanner.Text())
+			ch <- Word(scanner.Text())
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// Strips all leading and trailing non-letter characters from a word, and
+// converts it to a lower case token.
+func wordsToTokens(words <-chan Word) <-chan Token {
+	ch := make(chan Token)
+	go func() {
+		for word := range words {
+			tok := strings.TrimFunc(string(word), func(r rune) bool {
+				return !unicode.IsLetter(r)
+			})
+			if len(tok) > 0 {
+				ch <- Token(strings.ToLower(tok))
+			}
 		}
 		close(ch)
 	}()
