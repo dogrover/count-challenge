@@ -1,0 +1,38 @@
+# Word Count Challenge
+
+## Run the program
+
+Build the application with `go build`.
+
+The application accepts input from filename parameters, or from STDIN. For example, these are all valid invocations:
+
+```
+counter.exe test_data.txt
+counter.exe < test_data.txt
+cat test_data.txt | counter.exe
+```
+Multiple filenames are also OK. If one or more filenames are given in addition to STDIN, data from STDIN is processed last. For example:
+
+```
+counter.exe test_data.txt test_data.txt < tiny_data.txt
+```
+
+## What would I do next?
+
+This was my first Go program of any complexity, and I learned a lot along the way! Here's what I would change:
+
+- Add error channels to the pipeline functions. 
+- Change ChunkSize from the command-line, and allow tests to specify their own value for this
+- Tests for command-line args. I didn't find a simple way to do this, but there's important logic there that I don't have any tests for
+- Benchmark an alternative implementation that doesn't use concurrency\. I think this one is OK for speed and memory, but I didn't have time to compare.
+- Improve final chunk sorting. The hashmap is an OK choice for building the Frequency table, but getting the Top frequencies could be better. For example, instead of pulling the map into an array, and then sorting, I could have used an insertion sort to do that all in one pass.
+- I'm sure I'm not using idiomatic Go in several places: the Chunk.String() call, and the separate helper functions in the tests file that push arrays to channels probably show how new I am to the language.
+
+## Known bugs
+
+- I'm not closing text files that I open. Doing so, even with a `defer` call, closed down the whole pipeline earlier than expected. I'm sure this is something simple that I missed.
+- My counts from the `moby_dick.txt` file don't match the three examples given in the challenge description. The phrases "the sperm whale", and "of the whale" have different counts. My guess is that I'm tokenizing words differently than the reference implementation, possibly on words with embedded punctuation, which I ignore.
+
+## Summary
+
+I definitely spent more than 4 hours on this! Oops. I started doing it in Python, but I really wanted to spend some time with Go. I modelled my approach here after a common Python pattern: generator expressions. These provide a small memory footprint, good throughput, and reasonable scalability. Not sure if everything translated well into Go, but I love the first-class concurrency, and the ease of communicating between goroutines! It took me longer than expected to learn how to express pipeline operations, and how to write tests for those functions, but the effort was well worth it. I think I've got a new favorite language for CLI and client-server utilities!

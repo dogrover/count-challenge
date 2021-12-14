@@ -181,7 +181,7 @@ func run() int {
 	tokens := wordsToTokens(words)
 	chunks := getChunks(tokens)
 	counts := countChunks(chunks)
-	for _, chunk := range counts.Top(10) {
+	for _, chunk := range counts.Top(100) {
 		fmt.Printf("%v - %v\n", chunk.item, chunk.count)
 	}
 
