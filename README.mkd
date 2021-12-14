@@ -17,6 +17,8 @@ Multiple filenames are also OK. If one or more filenames are given in addition t
 counter.exe test_data.txt test_data.txt < tiny_data.txt
 ```
 
+Tests are also available with `go test`.
+
 ## What would I do next?
 
 This was my first Go program of any complexity, and I learned a lot along the way! Here's what I would change:
