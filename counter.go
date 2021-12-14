@@ -60,7 +60,10 @@ func getSources(args []string) <-chan io.Reader {
 				fmt.Printf("Error opening %v. Skipping.\n", fileName)
 				fmt.Println(err)
 			}
-			defer file.Close()
+			// TODO: Including file.close here in the goroutine causes the
+			// whole pipeline to shutdown early. Might need to close files
+			// after all counting.
+			// defer file.Close()
 			numSources++
 			ch <- file
 		}
