@@ -90,13 +90,42 @@ func TestGetChunks(t *testing.T) {
 	}
 }
 
+func TestCountChunks(t *testing.T) {
+	chunk_a := Chunk{"a", "b", "c"}
+	chunk_b := Chunk{"b", "c", "d"}
+	cases := []struct {
+		name string
+		data []Chunk
+		want ChunkFrequency
+	}{
+		{"simpleFreq", []Chunk{chunk_a, chunk_b, chunk_a}, ChunkFrequency{Count{2, chunk_a}, Count{1, chunk_b}}},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(tc *testing.T) {
+			freqs := countChunks(chunkReader(test.data))
+			assert.ElementsMatch(tc, test.want, freqs, "Elements should match")
+		})
+	}
+}
+
 // I'm sure there's an easier way to push elements of a slice into a channel,
-// but this works
+// but this works for testing
 func tokenReader(data []Token) <-chan Token {
 	ch := make(chan Token, ChunkSize)
 	go func() {
 		for _, tok := range data {
 			ch <- tok
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+func chunkReader(data []Chunk) <-chan Chunk {
+	ch := make(chan Chunk)
+	go func() {
+		for _, chunk := range data {
+			ch <- chunk
 		}
 		close(ch)
 	}()
