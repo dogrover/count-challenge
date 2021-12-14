@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"strings"
 	"testing"
 
@@ -18,11 +19,15 @@ func TestReadWords(t *testing.T) {
 		{"withNewline", "Lorem\nipsum\nsit\namet", expectedWords},
 		{"extraSpace", "    Lorem  \n  ipsum\n\n\nsit amet     ", expectedWords},
 	}
-	// Table-driven tests. Simple loop.
+	// Table-driven tests with a simple loop.
 	for _, test := range cases {
-		data := strings.NewReader(test.data)
+		srcChan := make(chan io.Reader)
+		go func() {
+			srcChan <- strings.NewReader(test.data)
+			close(srcChan)
+		}()
 		words := make([]Word, 0, len(test.want))
-		for w := range readWords(data) {
+		for w := range readWords(srcChan) {
 			words = append(words, w)
 		}
 		assert.ElementsMatch(t, test.want, words, "%v: Elements should match", test.name)
@@ -110,6 +115,7 @@ func TestCountChunks(t *testing.T) {
 
 // I'm sure there's an easier way to push elements of a slice into a channel,
 // but this works for testing
+// TODO: Check if this can be made generic with interface{} and reflection
 func tokenReader(data []Token) <-chan Token {
 	ch := make(chan Token, ChunkSize)
 	go func() {

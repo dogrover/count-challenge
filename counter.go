@@ -21,6 +21,8 @@ type Count struct {         // Number of times a chunk occurs
 }
 type ChunkFrequency []Count // list of chunks, by frequency
 
+// TODO: Normal type coercion, []string(c[:]) didn't work here, and neither did
+// copying to a slice. This could probably be cleaner.
 func (c Chunk) String() string {
 	s := make([]string, ChunkSize)
 	for i, e := range c {
@@ -36,19 +38,62 @@ func (c ChunkFrequency) Less(i, j int) bool { return c[i].count > c[j].count }
 
 // Get the top n chunks from a frequency list
 func (c ChunkFrequency) Top(n int) ChunkFrequency {
-	top := make(ChunkFrequency, n)
-	copy(top[:], c[:n])
+	num := n
+	if len(c) < n {
+		num = len(c)
+	}
+	top := make(ChunkFrequency, num)
+
+	copy(top[:], c[:num])
 	return top
 }
 
-// Scans a reader for words, delimited by whitespace (as defined by unicode.isSpace)
-func readWords(file io.Reader) <-chan Word {
-	ch := make(chan Word)
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanWords)
+// Given a list of file paths, produces a channel of Readers for those files
+func getSources(args []string) <-chan io.Reader {
+	ch := make(chan io.Reader)
+	numSources := 0
 	go func() {
-		for scanner.Scan() {
-			ch <- Word(scanner.Text())
+		// First, try to open filenames given as params
+		for _, fileName := range args {
+			file, err := os.Open(fileName)
+			if err != nil {
+				fmt.Printf("Error opening %v. Skipping.\n", fileName)
+				fmt.Println(err)
+			}
+			defer file.Close()
+			numSources++
+			ch <- file
+		}
+
+		// Finally, check STDIN
+		info, err := os.Stdin.Stat()
+		if err != nil {
+			panic(err)
+		}
+
+		if info.Mode()&os.ModeCharDevice == 0 || info.Size() > 0 {
+			numSources++
+			ch <- bufio.NewReader(os.Stdin)
+		}
+
+		if numSources < 1 {
+			fmt.Println("Error: no input")
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// Scans readers for words, delimited by whitespace (as defined by unicode.isSpace)
+func readWords(readers <-chan io.Reader) <-chan Word {
+	ch := make(chan Word)
+	go func() {
+		for src := range readers {
+			scanner := bufio.NewScanner(src)
+			scanner.Split(bufio.ScanWords)
+			for scanner.Scan() {
+				ch <- Word(scanner.Text())
+			}
 		}
 		close(ch)
 	}()
@@ -128,25 +173,8 @@ func countChunks(chunks <-chan Chunk) ChunkFrequency {
 }
 
 func run() int {
-	// Check that we've been given exactly one file to process
-	numArgs := len(os.Args[1:])
-	if numArgs < 1 {
-		fmt.Fprintln(os.Stderr, "No filenames given")
-		return 1
-	} else if numArgs > 1 {
-		fmt.Fprintln(os.Stderr, "Multiple filenames given")
-		return 1
-	}
-
-	// Check for valid file
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		fmt.Println(err)
-		return 2
-	}
-	defer file.Close()
-
-	words := readWords(file)
+	sources := getSources(os.Args[1:])
+	words := readWords(sources)
 	tokens := wordsToTokens(words)
 	chunks := getChunks(tokens)
 	counts := countChunks(chunks)
